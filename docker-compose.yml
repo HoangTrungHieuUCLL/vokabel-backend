@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: vokabel
+      POSTGRES_PASSWORD: vokabel
+      POSTGRES_DB: vokabel
+    ports:
+      - "5432:5432"
+    volumes:
+      - vokabel-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vokabel"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://vokabel:vokabel@db:5432/vokabel
+      JWT_SECRET: local-dev-secret-not-for-production-change-on-deploy
+      APP_USERNAME: admin
+      APP_PASSWORD_HASH: ${APP_PASSWORD_HASH}
+      CORS_ORIGINS: http://localhost:5173
+      PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  vokabel-db-data:
