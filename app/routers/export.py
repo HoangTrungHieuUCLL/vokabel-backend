@@ -22,7 +22,7 @@ def _row(word: Word) -> dict:
         "word": word.word,
         "type": word.type,
         "meaning": word.meaning,
-        "example": word.example or "",
+        "example": word.example,
         "tags": ";".join(word.tags),
         "source": word.source or "",
         "comment": word.comment or "",
@@ -48,7 +48,9 @@ def export_words(format: Literal["csv", "json"] = Query(...), db: Session = Depe
         writer = csv.DictWriter(buf, fieldnames=EXPORT_COLUMNS)
         writer.writeheader()
         for w in words:
-            writer.writerow(_row(w))
+            row = _row(w)
+            row["example"] = json.dumps(row["example"], ensure_ascii=False)
+            writer.writerow(row)
         return Response(
             content=buf.getvalue(),
             media_type="text/csv",

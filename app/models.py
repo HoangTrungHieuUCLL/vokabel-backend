@@ -27,7 +27,8 @@ class Word(Base):
     search_key: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[str] = mapped_column(Text, nullable=False)
     meaning: Mapped[str] = mapped_column(Text, nullable=False)
-    example: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # list of {"de": ..., "meaning": ...} -- multiple example sentences per word
+    example: Mapped[list[dict]] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     attrs: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
     tags: Mapped[list[str]] = mapped_column(
         ARRAY(Text), nullable=False, default=list, server_default="{}"

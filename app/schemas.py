@@ -89,11 +89,16 @@ def validate_attrs(word_type: str, attrs: dict[str, Any]) -> dict[str, Any]:
     return {key: allowed[key](value, key) for key, value in attrs.items()}
 
 
+class ExampleSentence(BaseModel):
+    de: str = Field(min_length=1)
+    meaning: str = ""
+
+
 class WordBase(BaseModel):
     word: str = Field(min_length=1)
     type: WordType
     meaning: str = Field(min_length=1)
-    example: str | None = None
+    example: list[ExampleSentence] = Field(default_factory=list)
     attrs: dict[str, Any] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
     source: str | None = None
@@ -112,7 +117,7 @@ class WordUpdate(BaseModel):
     word: str | None = Field(default=None, min_length=1)
     type: WordType | None = None
     meaning: str | None = Field(default=None, min_length=1)
-    example: str | None = None
+    example: list[ExampleSentence] | None = None
     attrs: dict[str, Any] | None = None
     tags: list[str] | None = None
     source: str | None = None

@@ -151,6 +151,28 @@ def test_comment_round_trips_through_create_and_patch(client: TestClient, auth_h
     assert patched["comment"] == "updated note"
 
 
+def test_example_sentences_round_trip_through_create_and_patch(client: TestClient, auth_headers: dict) -> None:
+    created = client.post(
+        "/words",
+        json={
+            "word": "gut",
+            "type": "adjektiv",
+            "meaning": "good",
+            "example": [{"de": "Das ist gut.", "meaning": "That is good."}],
+        },
+        headers=auth_headers,
+    ).json()
+    assert created["example"] == [{"de": "Das ist gut.", "meaning": "That is good."}]
+
+    patched = client.patch(
+        f"/words/{created['id']}",
+        json={"example": [{"de": "Sehr gut!", "meaning": "Very good!"}, {"de": "Nicht so gut.", "meaning": "Not so good."}]},
+        headers=auth_headers,
+    ).json()
+    assert len(patched["example"]) == 2
+    assert patched["example"][1]["meaning"] == "Not so good."
+
+
 def test_bulk_create_never_fails_whole_batch(client: TestClient, auth_headers: dict) -> None:
     resp = client.post(
         "/words/bulk",

@@ -39,6 +39,26 @@ FIELD_ALIASES: dict[str, set[str]] = {
 }
 
 
+def _parse_example(value: Any) -> list[dict[str, str]]:
+    """Accepts our own JSON-list export, a plain single-sentence string (legacy /
+    other tools), or an already-parsed list (JSON file import) -- always returns
+    the [{"de": ..., "meaning": ...}] shape the DB column expects."""
+    if not value:
+        return []
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            return [{"de": value, "meaning": ""}]
+    if isinstance(value, list):
+        return [
+            {"de": str(v.get("de", "")), "meaning": str(v.get("meaning", ""))} if isinstance(v, dict) else {"de": str(v), "meaning": ""}
+            for v in value
+            if v
+        ]
+    return []
+
+
 def _fold(s: str) -> str:
     s = s.strip().lower().translate(UMLAUTS)
     s = unicodedata.normalize("NFKD", s)
@@ -222,7 +242,7 @@ def commit_import(
         tags = mapped.get("tags") or []
         source = mapped.get("source")
         comment = mapped.get("comment")
-        example = mapped.get("example")
+        example = _parse_example(mapped.get("example"))
 
         existing = db.execute(
             select(Word).where(
