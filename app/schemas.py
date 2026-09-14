@@ -97,6 +97,7 @@ class WordBase(BaseModel):
     attrs: dict[str, Any] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
     source: str | None = None
+    comment: str | None = None
     is_hard: bool = False
 
 
@@ -115,6 +116,7 @@ class WordUpdate(BaseModel):
     attrs: dict[str, Any] | None = None
     tags: list[str] | None = None
     source: str | None = None
+    comment: str | None = None
     is_hard: bool | None = None
 
 

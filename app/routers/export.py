@@ -14,7 +14,7 @@ from app.models import Word
 
 router = APIRouter(prefix="/export", tags=["export"], dependencies=[Depends(get_current_user)])
 
-EXPORT_COLUMNS = ["word", "type", "meaning", "example", "tags", "source"]
+EXPORT_COLUMNS = ["word", "type", "meaning", "example", "tags", "source", "comment"]
 
 
 def _row(word: Word) -> dict:
@@ -25,6 +25,7 @@ def _row(word: Word) -> dict:
         "example": word.example or "",
         "tags": ";".join(word.tags),
         "source": word.source or "",
+        "comment": word.comment or "",
     }
 
 

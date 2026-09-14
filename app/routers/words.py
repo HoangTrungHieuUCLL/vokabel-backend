@@ -63,6 +63,7 @@ def create_word(body: WordCreate, db: Session = Depends(get_db)) -> Word:
         attrs=body.attrs,
         tags=body.tags,
         source=body.source,
+        comment=body.comment,
         is_hard=body.is_hard,
         hard_since=datetime.now(timezone.utc) if body.is_hard else None,
     )

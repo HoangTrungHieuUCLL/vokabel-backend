@@ -33,6 +33,7 @@ class Word(Base):
         ARRAY(Text), nullable=False, default=list, server_default="{}"
     )
     source: Mapped[str | None] = mapped_column(Text, nullable=True)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_hard: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     hard_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

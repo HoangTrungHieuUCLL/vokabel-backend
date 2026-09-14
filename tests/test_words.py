@@ -135,6 +135,22 @@ def test_delete_is_soft(client: TestClient, auth_headers: dict) -> None:
     assert any(w["id"] == created["id"] and w["deleted_at"] is not None for w in since)
 
 
+def test_comment_round_trips_through_create_and_patch(client: TestClient, auth_headers: dict) -> None:
+    created = client.post(
+        "/words",
+        json={"word": "gut", "type": "adjektiv", "meaning": "good", "comment": "used a lot in B1 exam essays"},
+        headers=auth_headers,
+    ).json()
+    assert created["comment"] == "used a lot in B1 exam essays"
+
+    patched = client.patch(
+        f"/words/{created['id']}",
+        json={"comment": "updated note"},
+        headers=auth_headers,
+    ).json()
+    assert patched["comment"] == "updated note"
+
+
 def test_bulk_create_never_fails_whole_batch(client: TestClient, auth_headers: dict) -> None:
     resp = client.post(
         "/words/bulk",

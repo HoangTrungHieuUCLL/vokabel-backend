@@ -35,6 +35,7 @@ FIELD_ALIASES: dict[str, set[str]] = {
     "example": {"example", "beispiel", "satz"},
     "tags": {"tags", "tag"},
     "source": {"source", "quelle"},
+    "comment": {"comment", "kommentar", "notiz", "notes"},
 }
 
 
@@ -220,6 +221,7 @@ def commit_import(
         search_key = make_search_key(word_text)
         tags = mapped.get("tags") or []
         source = mapped.get("source")
+        comment = mapped.get("comment")
         example = mapped.get("example")
 
         existing = db.execute(
@@ -242,6 +244,8 @@ def commit_import(
                     existing.tags = tags
                 if source:
                     existing.source = source
+                if comment:
+                    existing.comment = comment
                 existing.updated_at = datetime.now(timezone.utc)
                 updated += 1
                 continue
@@ -261,6 +265,7 @@ def commit_import(
                 attrs=attrs,
                 tags=tags,
                 source=source,
+                comment=comment,
             )
         )
         inserted += 1
