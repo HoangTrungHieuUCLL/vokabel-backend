@@ -4,7 +4,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.db import engine
-from app.routers import auth, export, imports, words
+from app.routers import auth, export, imports, public, words
 
 app = FastAPI(title="Vokabel API")
 
@@ -20,6 +20,7 @@ app.include_router(auth.router)
 app.include_router(words.router)
 app.include_router(imports.router)
 app.include_router(export.router)
+app.include_router(public.router)
 
 
 @app.get("/healthz")
