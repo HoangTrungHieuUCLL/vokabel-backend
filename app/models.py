@@ -1,6 +1,20 @@
 from datetime import datetime
+from datetime import date as date_type
 
-from sqlalchemy import ARRAY, BigInteger, Boolean, DateTime, Float, Integer, String, Text, func
+from sqlalchemy import (
+    ARRAY,
+    BigInteger,
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -52,3 +66,45 @@ class Word(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PushSubscription(Base):
+    """One row per browser that accepted notifications. Single-user app, so
+    there is no user column -- every subscription belongs to the one account."""
+
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    endpoint: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    p256dh: Mapped[str] = mapped_column(Text, nullable=False)
+    auth: Mapped[str] = mapped_column(Text, nullable=False)
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
+    failure_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class Spotlight(Base):
+    """The word picked for one notification slot. Written before the push is
+    attempted, so the app and the notification always name the same word, and
+    the (slot_date, slot) unique constraint makes a re-run of the dispatcher
+    idempotent rather than a second notification."""
+
+    __tablename__ = "spotlights"
+    __table_args__ = (UniqueConstraint("slot_date", "slot", name="uq_spotlights_date_slot"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    slot_date: Mapped[date_type] = mapped_column(Date, nullable=False)
+    # "HH:MM" local wall-clock, matching a NOTIFY_SLOTS entry.
+    slot: Mapped[str] = mapped_column(String(5), nullable=False)
+    word_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("words.id", ondelete="CASCADE"), nullable=False
+    )
+    # The UTC instant the local slot resolved to, so DST shifts stay visible.
+    scheduled_for: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

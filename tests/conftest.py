@@ -41,10 +41,11 @@ def _migrated_database():
 
 
 @pytest.fixture(autouse=True)
-def _clean_words_table():
+def _clean_tables():
     yield
     with engine.connect() as conn:
-        conn.execute(text("TRUNCATE TABLE words RESTART IDENTITY"))
+        # spotlights references words, so both go in one statement.
+        conn.execute(text("TRUNCATE TABLE words, spotlights, push_subscriptions RESTART IDENTITY CASCADE"))
         conn.commit()
 
 

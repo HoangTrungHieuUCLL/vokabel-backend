@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -160,3 +160,42 @@ class TokenResponse(BaseModel):
 
 class UserOut(BaseModel):
     username: str
+
+
+class PushSubscriptionKeys(BaseModel):
+    p256dh: str = Field(min_length=1)
+    auth: str = Field(min_length=1)
+
+
+class PushSubscriptionIn(BaseModel):
+    """Mirrors the browser's PushSubscription.toJSON() shape."""
+
+    endpoint: str = Field(min_length=1)
+    keys: PushSubscriptionKeys
+    user_agent: str | None = None
+
+
+class PushSubscriptionRef(BaseModel):
+    endpoint: str = Field(min_length=1)
+
+
+class NotificationStatus(BaseModel):
+    push_enabled: bool
+    subscribed: bool
+    subscription_count: int
+    slots: list[str]
+    timezone: str
+    next_slot_at: datetime | None = None
+
+
+class VapidKeyOut(BaseModel):
+    public_key: str
+    push_enabled: bool
+
+
+class SpotlightOut(BaseModel):
+    slot: str
+    slot_date: date
+    scheduled_for: datetime
+    next_slot_at: datetime | None = None
+    word: WordOut
