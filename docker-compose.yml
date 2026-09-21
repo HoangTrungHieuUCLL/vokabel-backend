@@ -24,6 +24,12 @@ services:
       APP_PASSWORD_HASH: ${APP_PASSWORD_HASH}
       CORS_ORIGINS: http://localhost:5173
       PORT: 8000
+      FRONTEND_URL: http://localhost:5173
+      # Leave the VAPID keys unset locally: the app still picks a spotlight
+      # word every slot, it just does not try to deliver it.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      NOTIFY_TIMEZONE: Europe/Brussels
     ports:
       - "8000:8000"
     depends_on:

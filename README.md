@@ -67,6 +67,14 @@ The API runs `alembic upgrade head` automatically on container start.
 | `APP_PASSWORD_HASH` | bcrypt hash from `scripts/hash_password.py` |
 | `CORS_ORIGINS` | Comma-separated list of allowed origins (the frontend URL) |
 | `PORT` | Port uvicorn binds to (Railway sets this automatically) |
+| `FRONTEND_URL` | Frontend origin, used to build the link a notification opens |
+| `VAPID_PUBLIC_KEY` | Web Push public key from `scripts/generate_vapid_keys.py` |
+| `VAPID_PRIVATE_KEY` | Web Push private key — backend only, never shipped to the browser |
+| `VAPID_SUBJECT` | `mailto:` address push services contact about your sends |
+| `NOTIFY_SLOTS` | Local times a word is pushed (default `09:00,12:00,15:00,18:00,22:00`) |
+| `NOTIFY_TIMEZONE` | IANA zone the slots are interpreted in (default `Europe/Brussels`) |
+| `NOTIFY_CATCHUP_MINUTES` | How late a missed slot may still be delivered (default 90) |
+| `SPOTLIGHT_COOLDOWN_DAYS` | Days before a pushed word can be picked again (default 30) |
 
 ## Deploying to Railway
 
@@ -79,6 +87,54 @@ The API runs `alembic upgrade head` automatically on container start.
 4. Railway builds the Dockerfile and runs migrations automatically on deploy
    (the container's `CMD` runs `alembic upgrade head` before starting uvicorn).
 5. Set `CORS_ORIGINS` to your deployed frontend's URL once it exists.
+
+## Daily word notifications
+
+Five words a day are pushed to subscribed browsers, at the local times in
+`NOTIFY_SLOTS` (09:00, 12:00, 15:00, 18:00 and 22:00 by default).
+
+The word for each slot is written to the `spotlights` table *before* the push
+is attempted, and `GET /spotlight` reads that same row — so the card in the app
+and the notification on the phone can never name different words. Each slot is
+one row with a `(slot_date, slot)` unique constraint, which makes re-running
+the dispatcher a no-op instead of a second notification.
+
+Selection prefers words not pushed in the last `SPOTLIGHT_COOLDOWN_DAYS` days
+and never repeats a word within the same day; with a vocabulary too small for
+that it falls back rather than skipping the slot.
+
+### Setup
+
+```bash
+python scripts/generate_vapid_keys.py   # once; put the output in the environment
+```
+
+Then schedule the dispatcher:
+
+```bash
+python -m app.jobs.dispatch_notifications
+```
+
+On Railway, add a **second service** from this same repo with:
+
+- Start command: `python -m app.jobs.dispatch_notifications`
+- Cron schedule: `0 * * * *`
+- The same `DATABASE_URL` and `VAPID_*` variables as the API service
+
+Run it **hourly**, not at the five slot times. Railway's cron is UTC, so a
+fixed UTC expression would drift by an hour at every DST change; running
+hourly lets the job read the local wall clock itself and pick up whichever
+slots have come due. A slot missed because of a redeploy is delivered by the
+next run as long as it is within `NOTIFY_CATCHUP_MINUTES`.
+
+With the VAPID keys unset the job still records each slot's word (so the app's
+spotlight card works) and simply skips delivery.
+
+### iOS
+
+iPhones only accept web push for a site **installed to the home screen**
+(Share → Add to Home Screen, iOS 16.4+). Notifications cannot be enabled from
+a normal Safari tab; the frontend's Settings page explains this in place.
 
 ## API
 
