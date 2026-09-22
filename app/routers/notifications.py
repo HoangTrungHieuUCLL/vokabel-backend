@@ -10,11 +10,14 @@ from app.db import get_db
 from app.models import PushSubscription, Word
 from app.schemas import (
     NotificationStatus,
+    NotifySettingsIn,
+    NotifySettingsOut,
     PushSubscriptionIn,
     PushSubscriptionRef,
     SpotlightOut,
     VapidKeyOut,
 )
+from app.services.notify_settings import MAX_SLOTS, InvalidSlots, get_slots, is_customised, set_slots
 from app.services.push import PushNotConfigured, build_payload, send_to_all
 from app.services.spotlight import current_spotlight, next_slot_instant, slot_label
 
@@ -45,9 +48,9 @@ def notification_status(endpoint: str | None = None, db: Session = Depends(get_d
         push_enabled=settings.push_enabled,
         subscribed=subscribed,
         subscription_count=total,
-        slots=[slot_label(s) for s in settings.notify_slots],
+        slots=[slot_label(s) for s in get_slots(db)],
         timezone=settings.NOTIFY_TIMEZONE,
-        next_slot_at=next_slot_instant(datetime.now(timezone.utc)),
+        next_slot_at=next_slot_instant(datetime.now(timezone.utc), slots=get_slots(db)),
     )
 
 
@@ -86,6 +89,29 @@ def unsubscribe(body: PushSubscriptionRef, db: Session = Depends(get_db)) -> Non
     if existing is not None:
         db.delete(existing)
         db.commit()
+
+
+def _settings_payload(db: Session) -> NotifySettingsOut:
+    return NotifySettingsOut(
+        slots=[slot_label(s) for s in get_slots(db)],
+        timezone=settings.NOTIFY_TIMEZONE,
+        customised=is_customised(db),
+        max_slots=MAX_SLOTS,
+    )
+
+
+@router.get("/settings", response_model=NotifySettingsOut)
+def read_settings(db: Session = Depends(get_db)) -> NotifySettingsOut:
+    return _settings_payload(db)
+
+
+@router.put("/settings", response_model=NotifySettingsOut)
+def write_settings(body: NotifySettingsIn, db: Session = Depends(get_db)) -> NotifySettingsOut:
+    try:
+        set_slots(db, body.slots)
+    except InvalidSlots as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from None
+    return _settings_payload(db)
 
 
 @router.post("/test")
@@ -130,6 +156,6 @@ def get_spotlight(db: Session = Depends(get_db)) -> SpotlightOut:
         slot=spotlight.slot,
         slot_date=spotlight.slot_date,
         scheduled_for=spotlight.scheduled_for,
-        next_slot_at=next_slot_instant(now),
+        next_slot_at=next_slot_instant(now, slots=get_slots(db)),
         word=word,
     )

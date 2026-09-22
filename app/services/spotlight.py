@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import Spotlight, Word
+from app.services.notify_settings import get_slots
 
 
 def slot_label(slot: time) -> str:
@@ -179,6 +180,7 @@ def current_spotlight(db: Session, now: datetime | None = None) -> Spotlight | N
     so the dashboard is never empty.
     """
     now = now or datetime.now(timezone.utc)
+    slots = get_slots(db)
     latest = db.execute(
         select(Spotlight)
         .where(Spotlight.scheduled_for <= now)
@@ -188,5 +190,5 @@ def current_spotlight(db: Session, now: datetime | None = None) -> Spotlight | N
     if latest is not None:
         return latest
 
-    slot_date, slot, scheduled_for = most_recent_past_slot(now)
+    slot_date, slot, scheduled_for = most_recent_past_slot(now, slots=slots)
     return ensure_spotlight(db, slot_date, slot, scheduled_for)

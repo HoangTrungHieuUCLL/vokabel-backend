@@ -199,3 +199,15 @@ class SpotlightOut(BaseModel):
     scheduled_for: datetime
     next_slot_at: datetime | None = None
     word: WordOut
+
+
+class NotifySettingsOut(BaseModel):
+    slots: list[str]
+    timezone: str
+    # True once the times have been edited; false while the env default applies.
+    customised: bool
+    max_slots: int
+
+
+class NotifySettingsIn(BaseModel):
+    slots: list[str] = Field(min_length=1)

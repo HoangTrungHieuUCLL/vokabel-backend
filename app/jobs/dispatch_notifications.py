@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 from app.db import SessionLocal
 from app.models import Word
+from app.services.notify_settings import get_changed_at, get_slots
 from app.services.push import PushNotConfigured, build_payload, send_to_all
 from app.services.spotlight import due_slots, ensure_spotlight, slot_label
 
@@ -25,8 +26,22 @@ def run(now: datetime | None = None) -> list[dict]:
     results: list[dict] = []
 
     with SessionLocal() as db:
-        for slot_date, slot, scheduled_for in due_slots(now):
+        slots = get_slots(db)
+        changed_at = get_changed_at(db)
+
+        for slot_date, slot, scheduled_for in due_slots(now, slots=slots):
             label = slot_label(slot)
+
+            # A slot that fell before the times were last edited is not
+            # delivered. Otherwise adding an earlier time would fire it
+            # immediately, so changing the schedule would itself ring the
+            # phone -- surprising, and the catch-up window makes it likely.
+            if changed_at is not None and scheduled_for < changed_at:
+                results.append(
+                    {"slot": label, "date": slot_date.isoformat(), "status": "before-settings-change"}
+                )
+                continue
+
             spotlight = ensure_spotlight(db, slot_date, slot, scheduled_for)
             if spotlight is None:
                 results.append({"slot": label, "date": slot_date.isoformat(), "status": "no-words"})
