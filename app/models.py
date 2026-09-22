@@ -108,3 +108,20 @@ class Spotlight(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class NotificationSettings(Base):
+    """User-chosen push times. Single row -- single-user app.
+
+    Absent, the env default applies, so the app behaves as before until the
+    times are edited for the first time.
+    """
+
+    __tablename__ = "notification_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    # Comma-separated "HH:MM" local wall-clock times.
+    slots: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

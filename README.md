@@ -71,7 +71,7 @@ The API runs `alembic upgrade head` automatically on container start.
 | `VAPID_PUBLIC_KEY` | Web Push public key from `scripts/generate_vapid_keys.py` |
 | `VAPID_PRIVATE_KEY` | Web Push private key — backend only, never shipped to the browser |
 | `VAPID_SUBJECT` | `mailto:` address push services contact about your sends |
-| `NOTIFY_SLOTS` | Local times a word is pushed (default `09:00,12:00,15:00,18:00,22:00`) |
+| `NOTIFY_SLOTS` | Local times a word is pushed, until they are set in the app (default `09:00,12:00,15:00,18:00,22:00`) |
 | `NOTIFY_TIMEZONE` | IANA zone the slots are interpreted in (default `Europe/Brussels`) |
 | `NOTIFY_CATCHUP_MINUTES` | How late a missed slot may still be delivered (default 90) |
 | `SPOTLIGHT_COOLDOWN_DAYS` | Days before a pushed word can be picked again (default 30) |
@@ -90,8 +90,14 @@ The API runs `alembic upgrade head` automatically on container start.
 
 ## Daily word notifications
 
-Five words a day are pushed to subscribed browsers, at the local times in
-`NOTIFY_SLOTS` (09:00, 12:00, 15:00, 18:00 and 22:00 by default).
+Words are pushed to subscribed browsers at times the user chooses in the
+app's Settings, stored in `notification_settings`. Until they are set for the
+first time, `NOTIFY_SLOTS` applies (09:00, 12:00, 15:00, 18:00 and 22:00 by
+default), so an existing deployment keeps its behaviour without a write.
+
+Changing the times never fires a slot retroactively: a slot that fell before
+the times were last edited is skipped, so adding an earlier time does not ring
+the phone the moment it is saved.
 
 The word for each slot is written to the `spotlights` table *before* the push
 is attempted, and `GET /spotlight` reads that same row — so the card in the app

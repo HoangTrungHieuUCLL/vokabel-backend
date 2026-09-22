@@ -45,7 +45,12 @@ def _clean_tables():
     yield
     with engine.connect() as conn:
         # spotlights references words, so both go in one statement.
-        conn.execute(text("TRUNCATE TABLE words, spotlights, push_subscriptions RESTART IDENTITY CASCADE"))
+        conn.execute(
+            text(
+                "TRUNCATE TABLE words, spotlights, push_subscriptions, notification_settings"
+                " RESTART IDENTITY CASCADE"
+            )
+        )
         conn.commit()
 
 
