@@ -186,3 +186,34 @@ def test_bulk_create_never_fails_whole_batch(client: TestClient, auth_headers: d
     results = resp.json()
     assert results[0]["status"] == "created"
     assert results[1]["status"] == "error"
+
+
+def test_create_nomen_without_plural(client: TestClient, auth_headers: dict) -> None:
+    resp = client.post(
+        "/words",
+        json={"word": "die Milch", "type": "nomen", "meaning": "milk", "attrs": {"artikel": "die", "plural": ""}},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["attrs"] == {"artikel": "die"}
+
+
+def test_create_and_update_related(client: TestClient, auth_headers: dict) -> None:
+    resp = client.post(
+        "/words",
+        json={
+            "word": "fahren",
+            "type": "verb",
+            "meaning": "to drive",
+            "attrs": {"hilfsverb": "sein", "praesens_3sg": "fährt", "praeteritum": "fuhr", "partizip_ii": "gefahren"},
+            "related": ["das Auto", "abfahren"],
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["related"] == ["das Auto", "abfahren"]
+
+    resp = client.patch(f"/words/{body['id']}", json={"related": ["die Fahrt"]}, headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["related"] == ["die Fahrt"]

@@ -43,8 +43,10 @@ def _bool(v: Any, key: str) -> bool:
 # are rejected outright so a typo'd attribute never silently vanishes.
 TYPE_ATTR_SPEC: dict[str, dict[str, dict[str, Callable[[Any, str], Any]]]] = {
     "nomen": {
-        "required": {"artikel": _enum({"der", "die", "das"}), "plural": _string},
-        "optional": {"genitiv": _string},
+        "required": {"artikel": _enum({"der", "die", "das"})},
+        # Plural is optional: some nouns (Singularetantum, e.g. "die Milch")
+        # have no plural form at all.
+        "optional": {"plural": _string, "genitiv": _string},
     },
     "verb": {
         "required": {
@@ -86,7 +88,13 @@ def validate_attrs(word_type: str, attrs: dict[str, Any]) -> dict[str, Any]:
         if attrs.get(key) in (None, ""):
             raise ValueError(f"'{key}' is required for type '{word_type}'")
 
-    return {key: allowed[key](value, key) for key, value in attrs.items()}
+    # A cleared optional field arrives as "" (or null); drop it rather than
+    # rejecting the whole save.
+    return {
+        key: allowed[key](value, key)
+        for key, value in attrs.items()
+        if not (key in spec["optional"] and value in (None, ""))
+    }
 
 
 class ExampleSentence(BaseModel):
@@ -101,6 +109,9 @@ class WordBase(BaseModel):
     example: list[ExampleSentence] = Field(default_factory=list)
     attrs: dict[str, Any] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
+    # Free-text related words/phrases; entries may or may not name words that
+    # are already recorded.
+    related: list[str] = Field(default_factory=list)
     source: str | None = None
     comment: str | None = None
     is_hard: bool = False
@@ -120,6 +131,7 @@ class WordUpdate(BaseModel):
     example: list[ExampleSentence] | None = None
     attrs: dict[str, Any] | None = None
     tags: list[str] | None = None
+    related: list[str] | None = None
     source: str | None = None
     comment: str | None = None
     is_hard: bool | None = None
